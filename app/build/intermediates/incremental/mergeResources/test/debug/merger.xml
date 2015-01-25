@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="2" >
+
+    <dataSet config="main" >
+        <source path="/home/4m1g0/AndroidStudioProjects/HelloOpenGLES201/app/src/androidTest/res" />
+        <source path="/home/4m1g0/AndroidStudioProjects/HelloOpenGLES201/app/build/generated/res/rs/test/debug" />
+        <source path="/home/4m1g0/AndroidStudioProjects/HelloOpenGLES201/app/build/generated/res/generated/test/debug" />
+    </dataSet>
+
+</merger>
