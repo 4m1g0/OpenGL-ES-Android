@@ -150,30 +150,12 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         Matrix.multiplyMV(mFigure.mLightPosInWorldSpace, 0, mFigure.mLightModelMatrix, 0, mFigure.mLightPosInModelSpace, 0);
         Matrix.multiplyMV(mFigure.mLightPosInEyeSpace, 0, mFigure.mViewMatrix, 0, mFigure.mLightPosInWorldSpace, 0);
 
-        // Draw some cubes.
-        Matrix.setIdentityM(mFigure.mModelMatrix, 0);
-        Matrix.translateM(mFigure.mModelMatrix, 0, 4.0f, 0.0f, -7.0f);
-        Matrix.rotateM(mFigure.mModelMatrix, 0, angleInDegrees, 1.0f, 0.0f, 0.0f);
-        mFigure.drawFigure();
-
-        Matrix.setIdentityM(mFigure.mModelMatrix, 0);
-        Matrix.translateM(mFigure.mModelMatrix, 0, -4.0f, 0.0f, -7.0f);
-        Matrix.rotateM(mFigure.mModelMatrix, 0, angleInDegrees, 0.0f, 1.0f, 0.0f);
-        mFigure.drawFigure();
-
-        Matrix.setIdentityM(mFigure.mModelMatrix, 0);
-        Matrix.translateM(mFigure.mModelMatrix, 0, 0.0f, 4.0f, -7.0f);
-        Matrix.rotateM(mFigure.mModelMatrix, 0, angleInDegrees, 0.0f, 0.0f, 1.0f);
-        mFigure.drawFigure();
-
-        Matrix.setIdentityM(mFigure.mModelMatrix, 0);
-        Matrix.translateM(mFigure.mModelMatrix, 0, 0.0f, -4.0f, -7.0f);
-        mFigure.drawFigure();
-
+        // Draw figure.
         Matrix.setIdentityM(mFigure.mModelMatrix, 0);
 
         Matrix.translateM(mFigure.mModelMatrix, 0, 0.0f, 0.0f, -5.0f);
-        Matrix.rotateM(mFigure.mModelMatrix, 0, angleInDegrees, 1.0f, 1.0f, 0.0f);
+        Matrix.rotateM(mFigure.mModelMatrix, 0, mYAngle, 1.0f, 0.0f, 0.0f);
+        Matrix.rotateM(mFigure.mModelMatrix, 0, mXAngle, 0.0f, 1.0f, 0.0f);
         Matrix.scaleM(mFigure.mModelMatrix, 0, 2f,2f,2f);
         mFigure.drawFigure();
 
