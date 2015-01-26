@@ -31,6 +31,11 @@
                 path="/home/4m1g0/AndroidStudioProjects/HelloOpenGLES201/app/src/main/res/raw/arm.off"
                 qualifiers=""
                 type="raw" />
+            <file
+                name="test"
+                path="/home/4m1g0/AndroidStudioProjects/HelloOpenGLES201/app/src/main/res/raw/test.off"
+                qualifiers=""
+                type="raw" />
         </source>
         <source path="/home/4m1g0/AndroidStudioProjects/HelloOpenGLES201/app/build/generated/res/rs/debug" />
         <source path="/home/4m1g0/AndroidStudioProjects/HelloOpenGLES201/app/build/generated/res/generated/debug" />

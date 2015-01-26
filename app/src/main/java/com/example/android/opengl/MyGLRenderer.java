@@ -154,26 +154,28 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(mFigure.mModelMatrix, 0);
         Matrix.translateM(mFigure.mModelMatrix, 0, 4.0f, 0.0f, -7.0f);
         Matrix.rotateM(mFigure.mModelMatrix, 0, angleInDegrees, 1.0f, 0.0f, 0.0f);
-        mFigure.drawCube();
+        mFigure.drawFigure();
 
         Matrix.setIdentityM(mFigure.mModelMatrix, 0);
         Matrix.translateM(mFigure.mModelMatrix, 0, -4.0f, 0.0f, -7.0f);
         Matrix.rotateM(mFigure.mModelMatrix, 0, angleInDegrees, 0.0f, 1.0f, 0.0f);
-        mFigure.drawCube();
+        mFigure.drawFigure();
 
         Matrix.setIdentityM(mFigure.mModelMatrix, 0);
         Matrix.translateM(mFigure.mModelMatrix, 0, 0.0f, 4.0f, -7.0f);
         Matrix.rotateM(mFigure.mModelMatrix, 0, angleInDegrees, 0.0f, 0.0f, 1.0f);
-        mFigure.drawCube();
+        mFigure.drawFigure();
 
         Matrix.setIdentityM(mFigure.mModelMatrix, 0);
         Matrix.translateM(mFigure.mModelMatrix, 0, 0.0f, -4.0f, -7.0f);
-        mFigure.drawCube();
+        mFigure.drawFigure();
 
         Matrix.setIdentityM(mFigure.mModelMatrix, 0);
+
         Matrix.translateM(mFigure.mModelMatrix, 0, 0.0f, 0.0f, -5.0f);
         Matrix.rotateM(mFigure.mModelMatrix, 0, angleInDegrees, 1.0f, 1.0f, 0.0f);
-        mFigure.drawCube();
+        Matrix.scaleM(mFigure.mModelMatrix, 0, 2f,2f,2f);
+        mFigure.drawFigure();
 
         // Draw a point to indicate the light.
         GLES20.glUseProgram(mFigure.mPointProgramHandle);

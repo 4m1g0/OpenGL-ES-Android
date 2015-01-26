@@ -1,8 +1,13 @@
 package com.example.android.opengl;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -12,6 +17,8 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.SystemClock;
 import android.util.Log;
+
+import static android.util.FloatMath.sqrt;
 
 /**
  * This class implements our custom renderer. Note that the GL10 parameter passed in is unused for OpenGL ES 2.0
@@ -46,9 +53,10 @@ public class Figure
     protected float[] mLightModelMatrix = new float[16];
 
     /** Store our model data in a float buffer. */
-    private final FloatBuffer mCubePositions;
-    private final FloatBuffer mCubeColors;
-    private final FloatBuffer mCubeNormals;
+    private final FloatBuffer mPositions;
+    private final ShortBuffer mDrawOrder;
+    private final FloatBuffer mColors;
+    private final FloatBuffer mNormals;
 
     /** This will be used to pass in the transformation matrix. */
     protected int mMVPMatrixHandle;
@@ -70,6 +78,9 @@ public class Figure
 
     /** How many bytes per float. */
     private final int mBytesPerFloat = 4;
+
+    /** How many bytes per ahort. */
+    private final int mBytesPerShort = 2;
 
     /** Size of the position data in elements. */
     private final int mPositionDataSize = 3;
@@ -95,16 +106,22 @@ public class Figure
 
     /** This is a handle to our light point program. */
     protected int mPointProgramHandle;
+    
+    private float[] positionData;
+    private float[] colorData;
+    private float[] normalData;
+    private short[] drawOrderData;
 
     /**
      * Initialize the model data.
      */
     public Figure()
     {
-        // Define points for a cube.
+        // Define points for a figure.
+        parseFile();
 
         // X, Y, Z
-        final float[] cubePositionData =
+        /*final float[] cubePositionData =
                 {
                         // In OpenGL counter-clockwise winding is default. This means that when we look at a triangle,
                         // if the points are counter-clockwise we are looking at the "front". If not we are looking at
@@ -158,10 +175,10 @@ public class Figure
                         1.0f, -1.0f, 1.0f,
                         -1.0f, -1.0f, 1.0f,
                         -1.0f, -1.0f, -1.0f,
-                };
+                };*/
 
         // R, G, B, A
-        final float[] cubeColorData =
+        /*final float[] cubeColorData =
                 {
                         // Front face (red)
                         1.0f, 0.0f, 0.0f, 1.0f,
@@ -210,13 +227,13 @@ public class Figure
                         1.0f, 0.0f, 1.0f, 1.0f,
                         1.0f, 0.0f, 1.0f, 1.0f,
                         1.0f, 0.0f, 1.0f, 1.0f
-                };
+                };*/
 
         // X, Y, Z
         // The normal is used in light calculations and is a vector which points
         // orthogonal to the plane of the surface. For a cube model, the normals
         // should be orthogonal to the points of each face.
-        final float[] cubeNormalData =
+        /*final float[] cubeNormalData =
                 {
                         // Front face
                         0.0f, 0.0f, 1.0f,
@@ -265,25 +282,28 @@ public class Figure
                         0.0f, -1.0f, 0.0f,
                         0.0f, -1.0f, 0.0f,
                         0.0f, -1.0f, 0.0f
-                };
+                };*/
 
         // Initialize the buffers.
-        mCubePositions = ByteBuffer.allocateDirect(cubePositionData.length * mBytesPerFloat)
+        mPositions = ByteBuffer.allocateDirect(positionData.length * mBytesPerFloat)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mCubePositions.put(cubePositionData).position(0);
+        mPositions.put(positionData).position(0);
 
-        mCubeColors = ByteBuffer.allocateDirect(cubeColorData.length * mBytesPerFloat)
-                .order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mCubeColors.put(cubeColorData).position(0);
+        mDrawOrder = ByteBuffer.allocateDirect(drawOrderData.length * mBytesPerShort)
+                .order(ByteOrder.nativeOrder()).asShortBuffer();
+        mDrawOrder.put(drawOrderData).position(0);
 
-        mCubeNormals = ByteBuffer.allocateDirect(cubeNormalData.length * mBytesPerFloat)
+        mColors = ByteBuffer.allocateDirect(colorData.length * mBytesPerFloat)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mCubeNormals.put(cubeNormalData).position(0);
+        mColors.put(colorData).position(0);
+
+        mNormals = ByteBuffer.allocateDirect(normalData.length * mBytesPerFloat)
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
+        mNormals.put(normalData).position(0);
     }
 
     protected String getVertexShader()
     {
-        // TODO: Explain why we normalize the vectors, explain some of the vector math behind it all. Explain what is eye space.
         final String vertexShader =
                 "uniform mat4 u_MVPMatrix;      \n"		// A constant representing the combined model/view/projection matrix.
                         + "uniform mat4 u_MVMatrix;       \n"		// A constant representing the combined model/view matrix.
@@ -309,9 +329,10 @@ public class Figure
                         // pointing in the same direction then it will get max illumination.
                         + "   float diffuse = max(dot(modelViewNormal, lightVector), 0.1);       \n"
                         // Attenuate the light based on distance.
-                        + "   diffuse = diffuse * (1.0 / (1.0 + (0.25 * distance * distance)));  \n"
+                        + "   diffuse = diffuse * (1.0 / (1.0 + (0.1 * distance * distance )));  \n"
                         // Multiply the color by the illumination level. It will be interpolated across the triangle.
                         + "   v_Color = a_Color * diffuse;                                       \n"
+                        //+ "   v_Color = a_Color;                                       \n"
                         // gl_Position is a special variable used to store the final position.
                         // Multiply the vertex by the matrix to get the final point in normalized screen coordinates.
                         + "   gl_Position = u_MVPMatrix * a_Position;                            \n"
@@ -335,31 +356,31 @@ public class Figure
         return fragmentShader;
     }
 
-    
+
 
     /**
      * Draws a cube.
      */
-    protected void drawCube()
+    protected void drawFigure()
     {
         // Pass in the position information
-        mCubePositions.position(0);
+        mPositions.position(0);
         GLES20.glVertexAttribPointer(mPositionHandle, mPositionDataSize, GLES20.GL_FLOAT, false,
-                0, mCubePositions);
+                0, mPositions);
 
         GLES20.glEnableVertexAttribArray(mPositionHandle);
 
         // Pass in the color information
-        mCubeColors.position(0);
+        mColors.position(0);
         GLES20.glVertexAttribPointer(mColorHandle, mColorDataSize, GLES20.GL_FLOAT, false,
-                0, mCubeColors);
+                0, mColors);
 
         GLES20.glEnableVertexAttribArray(mColorHandle);
 
         // Pass in the normal information
-        mCubeNormals.position(0);
+        mNormals.position(0);
         GLES20.glVertexAttribPointer(mNormalHandle, mNormalDataSize, GLES20.GL_FLOAT, false,
-                0, mCubeNormals);
+                0, mNormals);
 
         GLES20.glEnableVertexAttribArray(mNormalHandle);
 
@@ -381,7 +402,8 @@ public class Figure
         GLES20.glUniform3f(mLightPosHandle, mLightPosInEyeSpace[0], mLightPosInEyeSpace[1], mLightPosInEyeSpace[2]);
 
         // Draw the cube.
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrderData.length,
+                GLES20.GL_UNSIGNED_SHORT, mDrawOrder);
     }
 
     /**
@@ -499,5 +521,128 @@ public class Figure
         }
 
         return programHandle;
+    }
+
+    private void parseFile() {
+        // parse file
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("res/raw/arm.off");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        try {
+            String line;
+            line = reader.readLine();
+            if (!line.trim().equals("OFF")) {
+                throw new IOException();
+            }
+            line = reader.readLine();
+            String token[] = line.split(" ");
+            int numVertex = Integer.parseInt(token[0].trim());
+            int numFaces = Integer.parseInt(token[1].trim());
+
+            positionData = new float[numVertex*mPositionDataSize];
+            int cordNum = 0;
+
+            // parse vertex
+            for (int i=0; i < numVertex; i++){
+                line = reader.readLine();
+                for (String cord : line.split(" ")){
+                    positionData[cordNum++] = Float.parseFloat(cord.trim());
+                }
+            }
+
+            drawOrderData = new short[numFaces*3];
+            int orderNum = 0;
+
+            // parse faces
+            for (int i=0; i < numFaces; i++){
+                line = reader.readLine();
+                String order[] = line.split(" ");
+                for (int j=1; j < 4; j++){ // descartamos el primer número que siempre va a ser 3 para triangulos
+                    drawOrderData[orderNum++] = Short.parseShort(order[j].trim());
+                }
+            }
+
+            // Pintamos de blanco
+            colorData = new float[numVertex*4];
+            for (int i=0; i < numVertex*4; i++) {
+                colorData[i] = 1.0f;
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        float a[] = new float[3];
+        float b[] = new float[3];
+        float c[] = new float[3];
+        float v1[] = new float[3];
+        float v2[] = new float[3];
+        float normals[] = new float[drawOrderData.length * 3];
+
+        // Calculate normal vectors
+        for (int i=0; i < drawOrderData.length; i+=3){
+            // set cord for first point of the face
+            a[0] = positionData[drawOrderData[i] * mPositionDataSize];
+            a[1] = positionData[drawOrderData[i] * mPositionDataSize + 1];
+            a[2] = positionData[drawOrderData[i] * mPositionDataSize + 2];
+            // set cord for second point of the face
+            b[0] = positionData[drawOrderData[i+1] * mPositionDataSize];
+            b[1] = positionData[drawOrderData[i+1] * mPositionDataSize + 1];
+            b[2] = positionData[drawOrderData[i+1] * mPositionDataSize + 2];
+            // set cord for third point of the face
+            c[0] = positionData[drawOrderData[i+2] * mPositionDataSize];
+            c[1] = positionData[drawOrderData[i+2] * mPositionDataSize + 1];
+            c[2] = positionData[drawOrderData[i+2] * mPositionDataSize + 2];
+
+            // calculate vector ab
+            v1[0] = b[0] - a[0];
+            v1[1] = b[1] - a[1];
+            v1[2] = b[2] - a[2];
+
+            // calculate vector ac
+            v2[0] = c[0] - a[0];
+            v2[1] = c[1] - a[1];
+            v2[2] = c[2] - a[2];
+
+            // Multiply both vectors to get the normal vector of the face
+            normals[i] = v1[1] * v2[2] - v1[2] * v2[1];
+            normals[i + 1] = v1[2] * v2[0] - v1[0] * v2[2];
+            normals[i + 2] = v1[0] * v2[1] - v1[1] * v2[0];
+
+            // make it unitary
+            float length = sqrt(normals[i]*normals[i] + normals[i+1]*normals[i+1] + normals[i+2]*normals[i+2]);
+            normals[i] /= length;
+            normals[i+1] /= length;
+            normals[i+2] /= length;
+        }
+
+        /*for (int i=0; i<18; i++) {
+            Log.d("NORMALS", normals[i]+"");
+        }*/
+
+        // aqui guardamos una normal por vertice (3 coordenadas cada 1)
+        normalData = new float[positionData.length /* / positionData_PER_VERTEX * 3 */];
+
+        // Calculate vertex normals by the average of contiguous face normals.
+        for (int i=0; i < positionData.length; i += mPositionDataSize) {
+            float[] vertexNormal = new float[3];
+            int sum = 0;
+            for (int j=0; j < drawOrderData.length; j++) {
+                // buscamos las caras que contienen el vertice "i" y en caso afirmativo lo sumamos para hacer la media
+                if (drawOrderData[j] == i/3) {
+                    int t = j % 3; // primera coordenada de la cara
+                    vertexNormal[0] += normals[j-t];
+                    vertexNormal[1] += normals[j-t+1];
+                    vertexNormal[2] += normals[j-t+2];
+                    sum++;
+                }
+            }
+            normalData[i] = vertexNormal[0] / sum;
+            normalData[i+1] = vertexNormal[1] / sum;
+            normalData[i+2] = vertexNormal[2] / sum;
+        }
+
+        /*for (int i=0; i<3; i++) {
+            Log.d("VERTEX NORMALS", vertexNormals[i]+"");
+        }*/
     }
 }
