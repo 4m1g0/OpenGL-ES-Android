@@ -52,6 +52,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
     private float mXAngle;
     private float mYAngle;
+    private float mScale = 2;
 
 
     @Override
@@ -145,6 +146,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(mFigure.mLightModelMatrix, 0);
         Matrix.translateM(mFigure.mLightModelMatrix, 0, 0.0f, 0.0f, -5.0f);
         Matrix.rotateM(mFigure.mLightModelMatrix, 0, angleInDegrees, 0.0f, 1.0f, 0.0f);
+        Matrix.rotateM(mFigure.mLightModelMatrix, 0, angleInDegrees, 1.0f, 0.0f, 0.0f);
         Matrix.translateM(mFigure.mLightModelMatrix, 0, 0.0f, 0.0f, 2.0f);
 
         Matrix.multiplyMV(mFigure.mLightPosInWorldSpace, 0, mFigure.mLightModelMatrix, 0, mFigure.mLightPosInModelSpace, 0);
@@ -156,7 +158,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         Matrix.translateM(mFigure.mModelMatrix, 0, 0.0f, 0.0f, -5.0f);
         Matrix.rotateM(mFigure.mModelMatrix, 0, mYAngle, 1.0f, 0.0f, 0.0f);
         Matrix.rotateM(mFigure.mModelMatrix, 0, mXAngle, 0.0f, 1.0f, 0.0f);
-        Matrix.scaleM(mFigure.mModelMatrix, 0, 2f,2f,2f);
+        Matrix.scaleM(mFigure.mModelMatrix, 0, mScale,mScale,mScale);
         mFigure.drawFigure();
 
         // Draw a point to indicate the light.
@@ -246,6 +248,9 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     }
     public void setYAngle(float angle) {
         mYAngle = angle;
+    }
+    public void setScale(float scale) {
+        mScale = scale;
     }
 
 }

@@ -31,6 +31,7 @@ public class MyGLSurfaceView extends GLSurfaceView  {
     private final MyGLRenderer mRenderer;
     private int rotate_threshold = 30;
     private ScaleGestureDetector mScaleDetector;
+    private float mScaleFactor = 2.f;
 
 
 
@@ -59,7 +60,7 @@ public class MyGLSurfaceView extends GLSurfaceView  {
         // MotionEvent reports input details from the touch screen
         // and other input controls. In this case, you are only
         // interested in events where the touch position changed.
-       mScaleDetector.onTouchEvent(e);
+        mScaleDetector.onTouchEvent(e);
         if (!mScaleDetector.isInProgress()) {
             float x = e.getX();
             float y = e.getY();
@@ -91,11 +92,13 @@ public class MyGLSurfaceView extends GLSurfaceView  {
     }
 
 
-    private class ScaleListener
-            extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
-            detector.getScaleFactor();
+            mScaleFactor *= detector.getScaleFactor();
+            // Don't let the object get too small or too large.
+            mScaleFactor = Math.max(0.5f, Math.min(mScaleFactor, 15.0f));
+            mRenderer.setScale(mScaleFactor);
             return true;
         }
     }
