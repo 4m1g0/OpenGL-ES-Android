@@ -56,7 +56,7 @@ public class Figure
     private final FloatBuffer mPositions;
     private final ShortBuffer mDrawOrder;
     private final FloatBuffer mColors;
-    private final FloatBuffer mNormals;
+    //private final FloatBuffer mNormals;
 
     /** This will be used to pass in the transformation matrix. */
     protected int mMVPMatrixHandle;
@@ -76,6 +76,8 @@ public class Figure
     /** This will be used to pass in model normal information. */
     protected int mNormalHandle;
 
+    protected int mTextureDataHandle;
+
     /** How many bytes per float. */
     private final int mBytesPerFloat = 4;
 
@@ -90,6 +92,9 @@ public class Figure
 
     /** Size of the normal data in elements. */
     private final int mNormalDataSize = 3;
+
+    /** Size of the normal data in elements. */
+    private final int mTexturePositionDataSize = 3;
 
     /** Used to hold a light centered on the origin in model space. We need a 4th coordinate so we can get translations to work when
      *  we multiply this by our transformation matrices. */
@@ -108,8 +113,9 @@ public class Figure
     protected int mPointProgramHandle;
     
     private float[] positionData;
+    private float[] texturePositionData;
     private float[] colorData;
-    private float[] normalData;
+    //private float[] normalData;
     private short[] drawOrderData;
 
     /**
@@ -297,41 +303,41 @@ public class Figure
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
         mColors.put(colorData).position(0);
 
-        mNormals = ByteBuffer.allocateDirect(normalData.length * mBytesPerFloat)
+        /*mNormals = ByteBuffer.allocateDirect(normalData.length * mBytesPerFloat)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mNormals.put(normalData).position(0);
+        mNormals.put(normalData).position(0);*/
     }
 
     protected String getVertexShader()
     {
         final String vertexShader =
                 "uniform mat4 u_MVPMatrix;      \n"		// A constant representing the combined model/view/projection matrix.
-                        + "uniform mat4 u_MVMatrix;       \n"		// A constant representing the combined model/view matrix.
-                        + "uniform vec3 u_LightPos;       \n"	    // The position of the light in eye space.
+                        //+ "uniform mat4 u_MVMatrix;       \n"		// A constant representing the combined model/view matrix.
+                        //+ "uniform vec3 u_LightPos;       \n"	    // The position of the light in eye space.
 
                         + "attribute vec4 a_Position;     \n"		// Per-vertex position information we will pass in.
                         + "attribute vec4 a_Color;        \n"		// Per-vertex color information we will pass in.
-                        + "attribute vec3 a_Normal;       \n"		// Per-vertex normal information we will pass in.
+                        //+ "attribute vec3 a_Normal;       \n"		// Per-vertex normal information we will pass in.
 
                         + "varying vec4 v_Color;          \n"		// This will be passed into the fragment shader.
 
                         + "void main()                    \n" 	// The entry point for our vertex shader.
                         + "{                              \n"
                         // Transform the vertex into eye space.
-                        + "   vec3 modelViewVertex = vec3(u_MVMatrix * a_Position);              \n"
+                        //+ "   vec3 modelViewVertex = vec3(u_MVMatrix * a_Position);              \n"
                         // Transform the normal's orientation into eye space.
-                        + "   vec3 modelViewNormal = vec3(u_MVMatrix * vec4(a_Normal, 0.0));     \n"
+                        //+ "   vec3 modelViewNormal = vec3(u_MVMatrix * vec4(a_Normal, 0.0));     \n"
                         // Will be used for attenuation.
-                        + "   float distance = length(u_LightPos - modelViewVertex);             \n"
+                        //+ "   float distance = length(u_LightPos - modelViewVertex);             \n"
                         // Get a lighting direction vector from the light to the vertex.
-                        + "   vec3 lightVector = normalize(u_LightPos - modelViewVertex);        \n"
+                        //+ "   vec3 lightVector = normalize(u_LightPos - modelViewVertex);        \n"
                         // Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
                         // pointing in the same direction then it will get max illumination.
-                        + "   float diffuse = max(dot(modelViewNormal, lightVector), 0.1);       \n"
+                        //+ "   float diffuse = max(dot(modelViewNormal, lightVector), 0.1);       \n"
                         // Attenuate the light based on distance.
-                        + "   diffuse = diffuse * (1.0 / (1.0 + (0.1 * distance * distance )));  \n"
+                        //+ "   diffuse = diffuse * (1.0 / (1.0 + (0.1 * distance * distance )));  \n"
                         // Multiply the color by the illumination level. It will be interpolated across the triangle.
-                        + "   v_Color = a_Color * diffuse;                                       \n"
+                        + "   v_Color = a_Color; \n"//* diffuse;                                       \n"
                         //+ "   v_Color = a_Color;                                       \n"
                         // gl_Position is a special variable used to store the final position.
                         // Multiply the vertex by the matrix to get the final point in normalized screen coordinates.
@@ -378,18 +384,18 @@ public class Figure
         GLES20.glEnableVertexAttribArray(mColorHandle);
 
         // Pass in the normal information
-        mNormals.position(0);
+        /*mNormals.position(0);
         GLES20.glVertexAttribPointer(mNormalHandle, mNormalDataSize, GLES20.GL_FLOAT, false,
                 0, mNormals);
 
-        GLES20.glEnableVertexAttribArray(mNormalHandle);
+        GLES20.glEnableVertexAttribArray(mNormalHandle);*/
 
         // This multiplies the view matrix by the model matrix, and stores the result in the MVP matrix
         // (which currently contains model * view).
         Matrix.multiplyMM(mMVPMatrix, 0, mViewMatrix, 0, mModelMatrix, 0);
 
         // Pass in the modelview matrix.
-        GLES20.glUniformMatrix4fv(mMVMatrixHandle, 1, false, mMVPMatrix, 0);
+        //GLES20.glUniformMatrix4fv(mMVMatrixHandle, 1, false, mMVPMatrix, 0);
 
         // This multiplies the modelview matrix by the projection matrix, and stores the result in the MVP matrix
         // (which now contains model * view * projection).
@@ -399,7 +405,7 @@ public class Figure
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
 
         // Pass in the light position in eye space.        
-        GLES20.glUniform3f(mLightPosHandle, mLightPosInEyeSpace[0], mLightPosInEyeSpace[1], mLightPosInEyeSpace[2]);
+        //GLES20.glUniform3f(mLightPosHandle, mLightPosInEyeSpace[0], mLightPosInEyeSpace[1], mLightPosInEyeSpace[2]);
 
         // Draw the cube.
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrderData.length,
@@ -529,10 +535,7 @@ public class Figure
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         try {
             String line;
-            line = reader.readLine();
-            if (!line.trim().equals("OFF")) {
-                throw new IOException();
-            }
+            while (!reader.readLine().trim().equals("OFF")) ;
             line = reader.readLine();
             String token[] = line.split(" ");
             int numVertex = Integer.parseInt(token[0].trim());
@@ -540,13 +543,20 @@ public class Figure
 
             positionData = new float[numVertex*mPositionDataSize];
             int cordNum = 0;
+            int texNum = 0;
 
             // parse vertex
             for (int i=0; i < numVertex; i++){
                 line = reader.readLine();
-                for (String cord : line.split(" ")){
-                    positionData[cordNum++] = Float.parseFloat(cord.trim());
+                String[] cord = line.split(" ");
+                // Vertex coords
+                for (int j=0; j < 3; j++){
+                    positionData[cordNum++] = Float.parseFloat(cord[j].trim());
                 }
+                // texture coords for each vertex
+                /*for (int j=3; j < 5; j++){
+                    texturePositionData[texNum++] = Float.parseFloat(cord[j].trim());
+                }*/
             }
 
             drawOrderData = new short[numFaces*3];
@@ -556,7 +566,7 @@ public class Figure
             for (int i=0; i < numFaces; i++){
                 line = reader.readLine();
                 String order[] = line.split(" ");
-                for (int j=1; j < 4; j++){ // descartamos el primer número que siempre va a ser 3 para triangulos
+                for (int j=1; j < 4; j++){ // descartamos el primer número que siempre va a ser 4
                     drawOrderData[orderNum++] = Short.parseShort(order[j].trim());
                 }
             }
@@ -571,7 +581,7 @@ public class Figure
             e.printStackTrace();
         }
 
-        float a[] = new float[3];
+        /*float a[] = new float[3];
         float b[] = new float[3];
         float c[] = new float[3];
         float v1[] = new float[3];
@@ -613,15 +623,15 @@ public class Figure
             normals[i] /= length;
             normals[i+1] /= length;
             normals[i+2] /= length;
-        }
+        }*/
 
         /*for (int i=0; i<18; i++) {
             Log.d("NORMALS", normals[i]+"");
         }*/
 
         // aqui guardamos una normal por vertice (3 coordenadas cada 1)
-        normalData = new float[positionData.length /* / positionData_PER_VERTEX * 3 */];
-
+        //normalData = new float[positionData.length /* / positionData_PER_VERTEX * 3 */];
+        /*
         // Calculate vertex normals by the average of contiguous face normals.
         for (int i=0; i < positionData.length; i += mPositionDataSize) {
             float[] vertexNormal = new float[3];
@@ -639,7 +649,7 @@ public class Figure
             normalData[i] = vertexNormal[0] / sum;
             normalData[i+1] = vertexNormal[1] / sum;
             normalData[i+2] = vertexNormal[2] / sum;
-        }
+        }*/
 
         /*for (int i=0; i<3; i++) {
             Log.d("VERTEX NORMALS", vertexNormals[i]+"");

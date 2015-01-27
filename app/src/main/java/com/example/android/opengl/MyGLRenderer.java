@@ -18,8 +18,12 @@ package com.example.android.opengl;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.GLUtils;
 import android.opengl.Matrix;
 import android.os.SystemClock;
 import android.util.Log;
@@ -96,7 +100,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         final int fragmentShaderHandle = mFigure.compileShader(GLES20.GL_FRAGMENT_SHADER, fragmentShader);
 
         mFigure.mPerVertexProgramHandle = mFigure.createAndLinkProgram(vertexShaderHandle, fragmentShaderHandle,
-                new String[] {"a_Position",  "a_Color", "a_Normal"});
+                new String[] {"a_Position",  "a_Color"/*, "a_Normal"/*, "a_TexCoordinate"*/});
 
         // Define a simple shader program for our point.
         final String pointVertexShader =
@@ -121,6 +125,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         final int pointFragmentShaderHandle = mFigure.compileShader(GLES20.GL_FRAGMENT_SHADER, pointFragmentShader);
         mFigure.mPointProgramHandle = mFigure.createAndLinkProgram(pointVertexShaderHandle, pointFragmentShaderHandle,
                 new String[] {"a_Position"});
+
+        //mFigure.mTextureDataHandle = loadTexture();
     }
 
     @Override
@@ -136,11 +142,11 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
         // Set program handles for cube drawing.
         mFigure.mMVPMatrixHandle = GLES20.glGetUniformLocation(mFigure.mPerVertexProgramHandle, "u_MVPMatrix");
-        mFigure.mMVMatrixHandle = GLES20.glGetUniformLocation(mFigure.mPerVertexProgramHandle, "u_MVMatrix");
-        mFigure.mLightPosHandle = GLES20.glGetUniformLocation(mFigure.mPerVertexProgramHandle, "u_LightPos");
+        //mFigure.mMVMatrixHandle = GLES20.glGetUniformLocation(mFigure.mPerVertexProgramHandle, "u_MVMatrix");
+        //mFigure.mLightPosHandle = GLES20.glGetUniformLocation(mFigure.mPerVertexProgramHandle, "u_LightPos");
         mFigure.mPositionHandle = GLES20.glGetAttribLocation(mFigure.mPerVertexProgramHandle, "a_Position");
         mFigure.mColorHandle = GLES20.glGetAttribLocation(mFigure.mPerVertexProgramHandle, "a_Color");
-        mFigure.mNormalHandle = GLES20.glGetAttribLocation(mFigure.mPerVertexProgramHandle, "a_Normal");
+        //mFigure.mNormalHandle = GLES20.glGetAttribLocation(mFigure.mPerVertexProgramHandle, "a_Normal");
 
         // Calculate position of the light. Rotate and then push into the distance.
         Matrix.setIdentityM(mFigure.mLightModelMatrix, 0);
@@ -162,8 +168,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         mFigure.drawFigure();
 
         // Draw a point to indicate the light.
-        GLES20.glUseProgram(mFigure.mPointProgramHandle);
-        mFigure.drawLight();
+        //GLES20.glUseProgram(mFigure.mPointProgramHandle);
+        //mFigure.drawLight();
     }
 
     @Override
@@ -251,6 +257,43 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     }
     public void setScale(float scale) {
         mScale = scale;
+    }
+
+    private int loadTexture()
+    {
+        final int[] textureHandle = new int[1];
+
+        GLES20.glGenTextures(1, textureHandle, 0);
+
+        if (textureHandle[0] != 0)
+        {
+            final BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inScaled = false;	// No pre-scaling
+
+
+            // Read in the resource
+            final Bitmap bitmap = BitmapFactory.decodeStream(this.getClass().getClassLoader().getResourceAsStream("res/raw/helens.ppm"));
+
+            // Bind to the texture in OpenGL
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0]);
+
+            // Set filtering
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
+
+            // Load the bitmap into the bound texture.
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+
+            // Recycle the bitmap, since its data has been loaded into OpenGL.
+            bitmap.recycle();
+        }
+
+        if (textureHandle[0] == 0)
+        {
+            throw new RuntimeException("Error loading texture.");
+        }
+
+        return textureHandle[0];
     }
 
 }
