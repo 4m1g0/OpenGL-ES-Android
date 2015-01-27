@@ -531,17 +531,18 @@ public class Figure
 
     private void parseFile() {
         // parse file
-        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("res/raw/arm.off");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("res/raw/helens.off");
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         try {
             String line;
-            while (!reader.readLine().trim().equals("OFF")) ;
+            while (!reader.readLine().trim().equals("STOFF")) ;
             line = reader.readLine();
             String token[] = line.split(" ");
             int numVertex = Integer.parseInt(token[0].trim());
             int numFaces = Integer.parseInt(token[1].trim());
 
             positionData = new float[numVertex*mPositionDataSize];
+            texturePositionData = new float[numVertex*mTexturePositionDataSize];
             int cordNum = 0;
             int texNum = 0;
 
@@ -551,15 +552,15 @@ public class Figure
                 String[] cord = line.split(" ");
                 // Vertex coords
                 for (int j=0; j < 3; j++){
-                    positionData[cordNum++] = Float.parseFloat(cord[j].trim());
+                    positionData[cordNum++] = Float.parseFloat(cord[j].trim()) / 1000;
                 }
                 // texture coords for each vertex
-                /*for (int j=3; j < 5; j++){
+                for (int j=3; j < 5; j++){
                     texturePositionData[texNum++] = Float.parseFloat(cord[j].trim());
-                }*/
+                }
             }
 
-            drawOrderData = new short[numFaces*3];
+            drawOrderData = new short[numFaces*3*2]; // 2 triangulos por cara, dividimos los cuadrados en 2 triangulos
             int orderNum = 0;
 
             // parse faces
@@ -569,6 +570,15 @@ public class Figure
                 for (int j=1; j < 4; j++){ // descartamos el primer número que siempre va a ser 4
                     drawOrderData[orderNum++] = Short.parseShort(order[j].trim());
                 }
+                // generamos el segundo triangulo del cuadrado a partir del ultimo vertice.
+                drawOrderData[orderNum] = drawOrderData[orderNum-3];
+                drawOrderData[orderNum+1] = drawOrderData[orderNum-1];
+                drawOrderData[orderNum+2] = Short.parseShort(order[4].trim());
+                orderNum += 3;
+            }
+            for (int i=0; i < 6; i++) {
+
+                Log.d("ORDER", drawOrderData[i]+"");
             }
 
             // Pintamos de blanco

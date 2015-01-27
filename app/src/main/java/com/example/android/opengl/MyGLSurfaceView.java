@@ -97,7 +97,7 @@ public class MyGLSurfaceView extends GLSurfaceView  {
         public boolean onScale(ScaleGestureDetector detector) {
             mScaleFactor *= detector.getScaleFactor();
             // Don't let the object get too small or too large.
-            mScaleFactor = Math.max(0.5f, Math.min(mScaleFactor, 15.0f));
+            mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 15.0f));
             mRenderer.setScale(mScaleFactor);
             return true;
         }
