@@ -40,14 +40,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     //private Cube mCube;
     private Figure mFigure;
 
-    // mMVPMatrix is an abbreviation for "Model View Projection Matrix"
-    /*private final float[] mMVPMatrix = new float[16];
-    private final float[] mProjectionMatrix = new float[16];
-    private final float[] mViewMatrix = new float[16];
-    private final float[] mRotationMatrix_x = new float[16];
-    private final float[] mRotationMatrix_y = new float[16];
-    private final float[] mRotationMatrix = new float[16];*/
-
 
 
     private float mXAngle;
@@ -79,14 +71,11 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         final float lookY = 0.0f;
         final float lookZ = -5.0f;
 
-        // Set our up vector. This is where our head would be pointing were we holding the camera.
+        // Set our up vector.
         final float upX = 0.0f;
         final float upY = 1.0f;
         final float upZ = 0.0f;
 
-        // Set the view matrix. This matrix can be said to represent the camera position.
-        // NOTE: In OpenGL 1, a ModelView matrix is used, which is a combination of a model and
-        // view matrix. In OpenGL 2, we can keep track of these matrices separately if we choose.
         Matrix.setLookAtM(mFigure.mViewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ);
 
         final String vertexShader = mFigure.getVertexShader();
@@ -101,7 +90,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         // Define a simple shader program for our point.
         final String pointVertexShader =
                 "uniform mat4 u_MVPMatrix;      \n"
-                        +	"attribute vec4 a_Position;     \n"
+                        + "attribute vec4 a_Position;     \n"
                         + "void main()                    \n"
                         + "{                              \n"
                         + "   gl_Position = u_MVPMatrix   \n"
@@ -183,29 +172,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
         Matrix.frustumM(mFigure.mProjectionMatrix, 0, left, right, bottom, top, near, far);
     }
-
-    /**
-     * Utility method for compiling a OpenGL shader.
-     *
-     * <p><strong>Note:</strong> When developing shaders, use the checkGlError()
-     * method to debug shader coding errors.</p>
-     *
-     * @param type - Vertex or fragment shader type.
-     * @param shaderCode - String containing the shader code.
-     * @return - Returns an id for the shader.
-     */
-    /*public static int loadShader(int type, String shaderCode){
-
-        // create a vertex shader type (GLES20.GL_VERTEX_SHADER)
-        // or a fragment shader type (GLES20.GL_FRAGMENT_SHADER)
-        int shader = GLES20.glCreateShader(type);
-
-        // add the source code to the shader and compile it
-        GLES20.glShaderSource(shader, shaderCode);
-        GLES20.glCompileShader(shader);
-
-        return shader;
-    }*/
 
     /**
     * Utility method for debugging OpenGL calls. Provide the name of the call

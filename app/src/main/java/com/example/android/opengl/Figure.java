@@ -9,47 +9,24 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
-
 import android.opengl.GLES20;
-import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import android.os.SystemClock;
 import android.util.Log;
 
 import static android.util.FloatMath.sqrt;
 
-/**
- * This class implements our custom renderer. Note that the GL10 parameter passed in is unused for OpenGL ES 2.0
- * renderers -- the static class GLES20 is used instead.
- */
 public class Figure
 {
-    /** Used for debug logs. */
-    private static final String TAG = "LessonTwoRenderer";
+    private static final String TAG = "Figure";
 
-    /**
-     * Store the model matrix. This matrix is used to move models from object space (where each model can be thought
-     * of being located at the center of the universe) to world space.
-     */
     protected float[] mModelMatrix = new float[16];
 
-    /**
-     * Store the view matrix. This can be thought of as our camera. This matrix transforms world space to eye space;
-     * it positions things relative to our eye.
-     */
     protected float[] mViewMatrix = new float[16];
 
-    /** Store the projection matrix. This is used to project the scene onto a 2D viewport. */
     protected float[] mProjectionMatrix = new float[16];
 
-    /** Allocate storage for the final combined matrix. This will be passed into the shader program. */
     private float[] mMVPMatrix = new float[16];
 
-    /**
-     * Stores a copy of the model matrix specifically for the light position.
-     */
     protected float[] mLightModelMatrix = new float[16];
 
     /** Store our model data in a float buffer. */
@@ -91,14 +68,10 @@ public class Figure
     /** Size of the normal data in elements. */
     private final int mNormalDataSize = 3;
 
-    /** Used to hold a light centered on the origin in model space. We need a 4th coordinate so we can get translations to work when
-     *  we multiply this by our transformation matrices. */
     protected final float[] mLightPosInModelSpace = new float[] {0.0f, 0.0f, 0.0f, 1.0f};
 
-    /** Used to hold the current position of the light in world space (after transformation via model matrix). */
     protected final float[] mLightPosInWorldSpace = new float[4];
 
-    /** Used to hold the transformed position of the light in eye space (after transformation via modelview matrix) */
     protected final float[] mLightPosInEyeSpace = new float[4];
 
     /** This is a handle to our per-vertex cube shading program. */
@@ -112,177 +85,10 @@ public class Figure
     private float[] normalData;
     private short[] drawOrderData;
 
-    /**
-     * Initialize the model data.
-     */
     public Figure()
     {
         // Define points for a figure.
         parseFile();
-
-        // X, Y, Z
-        /*final float[] cubePositionData =
-                {
-                        // In OpenGL counter-clockwise winding is default. This means that when we look at a triangle,
-                        // if the points are counter-clockwise we are looking at the "front". If not we are looking at
-                        // the back. OpenGL has an optimization where all back-facing triangles are culled, since they
-                        // usually represent the backside of an object and aren't visible anyways.
-
-                        // Front face
-                        -1.0f, 1.0f, 1.0f,
-                        -1.0f, -1.0f, 1.0f,
-                        1.0f, 1.0f, 1.0f,
-                        -1.0f, -1.0f, 1.0f,
-                        1.0f, -1.0f, 1.0f,
-                        1.0f, 1.0f, 1.0f,
-
-                        // Right face
-                        1.0f, 1.0f, 1.0f,
-                        1.0f, -1.0f, 1.0f,
-                        1.0f, 1.0f, -1.0f,
-                        1.0f, -1.0f, 1.0f,
-                        1.0f, -1.0f, -1.0f,
-                        1.0f, 1.0f, -1.0f,
-
-                        // Back face
-                        1.0f, 1.0f, -1.0f,
-                        1.0f, -1.0f, -1.0f,
-                        -1.0f, 1.0f, -1.0f,
-                        1.0f, -1.0f, -1.0f,
-                        -1.0f, -1.0f, -1.0f,
-                        -1.0f, 1.0f, -1.0f,
-
-                        // Left face
-                        -1.0f, 1.0f, -1.0f,
-                        -1.0f, -1.0f, -1.0f,
-                        -1.0f, 1.0f, 1.0f,
-                        -1.0f, -1.0f, -1.0f,
-                        -1.0f, -1.0f, 1.0f,
-                        -1.0f, 1.0f, 1.0f,
-
-                        // Top face
-                        -1.0f, 1.0f, -1.0f,
-                        -1.0f, 1.0f, 1.0f,
-                        1.0f, 1.0f, -1.0f,
-                        -1.0f, 1.0f, 1.0f,
-                        1.0f, 1.0f, 1.0f,
-                        1.0f, 1.0f, -1.0f,
-
-                        // Bottom face
-                        1.0f, -1.0f, -1.0f,
-                        1.0f, -1.0f, 1.0f,
-                        -1.0f, -1.0f, -1.0f,
-                        1.0f, -1.0f, 1.0f,
-                        -1.0f, -1.0f, 1.0f,
-                        -1.0f, -1.0f, -1.0f,
-                };*/
-
-        // R, G, B, A
-        /*final float[] cubeColorData =
-                {
-                        // Front face (red)
-                        1.0f, 0.0f, 0.0f, 1.0f,
-                        1.0f, 0.0f, 0.0f, 1.0f,
-                        1.0f, 0.0f, 0.0f, 1.0f,
-                        1.0f, 0.0f, 0.0f, 1.0f,
-                        1.0f, 0.0f, 0.0f, 1.0f,
-                        1.0f, 0.0f, 0.0f, 1.0f,
-
-                        // Right face (green)
-                        0.0f, 1.0f, 0.0f, 1.0f,
-                        0.0f, 1.0f, 0.0f, 1.0f,
-                        0.0f, 1.0f, 0.0f, 1.0f,
-                        0.0f, 1.0f, 0.0f, 1.0f,
-                        0.0f, 1.0f, 0.0f, 1.0f,
-                        0.0f, 1.0f, 0.0f, 1.0f,
-
-                        // Back face (blue)
-                        0.0f, 0.0f, 1.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 1.0f,
-
-                        // Left face (yellow)
-                        1.0f, 1.0f, 0.0f, 1.0f,
-                        1.0f, 1.0f, 0.0f, 1.0f,
-                        1.0f, 1.0f, 0.0f, 1.0f,
-                        1.0f, 1.0f, 0.0f, 1.0f,
-                        1.0f, 1.0f, 0.0f, 1.0f,
-                        1.0f, 1.0f, 0.0f, 1.0f,
-
-                        // Top face (cyan)
-                        0.0f, 1.0f, 1.0f, 1.0f,
-                        0.0f, 1.0f, 1.0f, 1.0f,
-                        0.0f, 1.0f, 1.0f, 1.0f,
-                        0.0f, 1.0f, 1.0f, 1.0f,
-                        0.0f, 1.0f, 1.0f, 1.0f,
-                        0.0f, 1.0f, 1.0f, 1.0f,
-
-                        // Bottom face (magenta)
-                        1.0f, 0.0f, 1.0f, 1.0f,
-                        1.0f, 0.0f, 1.0f, 1.0f,
-                        1.0f, 0.0f, 1.0f, 1.0f,
-                        1.0f, 0.0f, 1.0f, 1.0f,
-                        1.0f, 0.0f, 1.0f, 1.0f,
-                        1.0f, 0.0f, 1.0f, 1.0f
-                };*/
-
-        // X, Y, Z
-        // The normal is used in light calculations and is a vector which points
-        // orthogonal to the plane of the surface. For a cube model, the normals
-        // should be orthogonal to the points of each face.
-        /*final float[] cubeNormalData =
-                {
-                        // Front face
-                        0.0f, 0.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f,
-                        0.0f, 0.0f, 1.0f,
-
-                        // Right face
-                        1.0f, 0.0f, 0.0f,
-                        1.0f, 0.0f, 0.0f,
-                        1.0f, 0.0f, 0.0f,
-                        1.0f, 0.0f, 0.0f,
-                        1.0f, 0.0f, 0.0f,
-                        1.0f, 0.0f, 0.0f,
-
-                        // Back face
-                        0.0f, 0.0f, -1.0f,
-                        0.0f, 0.0f, -1.0f,
-                        0.0f, 0.0f, -1.0f,
-                        0.0f, 0.0f, -1.0f,
-                        0.0f, 0.0f, -1.0f,
-                        0.0f, 0.0f, -1.0f,
-
-                        // Left face
-                        -1.0f, 0.0f, 0.0f,
-                        -1.0f, 0.0f, 0.0f,
-                        -1.0f, 0.0f, 0.0f,
-                        -1.0f, 0.0f, 0.0f,
-                        -1.0f, 0.0f, 0.0f,
-                        -1.0f, 0.0f, 0.0f,
-
-                        // Top face
-                        0.0f, 1.0f, 0.0f,
-                        0.0f, 1.0f, 0.0f,
-                        0.0f, 1.0f, 0.0f,
-                        0.0f, 1.0f, 0.0f,
-                        0.0f, 1.0f, 0.0f,
-                        0.0f, 1.0f, 0.0f,
-
-                        // Bottom face
-                        0.0f, -1.0f, 0.0f,
-                        0.0f, -1.0f, 0.0f,
-                        0.0f, -1.0f, 0.0f,
-                        0.0f, -1.0f, 0.0f,
-                        0.0f, -1.0f, 0.0f,
-                        0.0f, -1.0f, 0.0f
-                };*/
 
         // Initialize the buffers.
         mPositions = ByteBuffer.allocateDirect(positionData.length * mBytesPerFloat)
@@ -305,7 +111,7 @@ public class Figure
     protected String getVertexShader()
     {
         final String vertexShader =
-                "uniform mat4 u_MVPMatrix;      \n"		// A constant representing the combined model/view/projection matrix.
+                          "uniform mat4 u_MVPMatrix;      \n"		// A constant representing the combined model/view/projection matrix.
                         + "uniform mat4 u_MVMatrix;       \n"		// A constant representing the combined model/view matrix.
                         + "uniform vec3 u_LightPos;       \n"	    // The position of the light in eye space.
 
@@ -315,26 +121,19 @@ public class Figure
 
                         + "varying vec4 v_Color;          \n"		// This will be passed into the fragment shader.
 
-                        + "void main()                    \n" 	// The entry point for our vertex shader.
+                        + "void main()                    \n"
                         + "{                              \n"
                         // Transform the vertex into eye space.
                         + "   vec3 modelViewVertex = vec3(u_MVMatrix * a_Position);              \n"
                         // Transform the normal's orientation into eye space.
                         + "   vec3 modelViewNormal = vec3(u_MVMatrix * vec4(a_Normal, 0.0));     \n"
-                        // Will be used for attenuation.
                         + "   float distance = length(u_LightPos - modelViewVertex);             \n"
                         // Get a lighting direction vector from the light to the vertex.
                         + "   vec3 lightVector = normalize(u_LightPos - modelViewVertex);        \n"
-                        // Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
-                        // pointing in the same direction then it will get max illumination.
                         + "   float diffuse = max(dot(modelViewNormal, lightVector), 0.1);       \n"
                         // Attenuate the light based on distance.
                         + "   diffuse = diffuse * (1.0 / (1.0 + (0.1 * distance * distance )));  \n"
-                        // Multiply the color by the illumination level. It will be interpolated across the triangle.
                         + "   v_Color = a_Color * diffuse;                                       \n"
-                        //+ "   v_Color = a_Color;                                       \n"
-                        // gl_Position is a special variable used to store the final position.
-                        // Multiply the vertex by the matrix to get the final point in normalized screen coordinates.
                         + "   gl_Position = u_MVPMatrix * a_Position;                            \n"
                         + "}                                                                     \n";
 
@@ -344,13 +143,10 @@ public class Figure
     protected String getFragmentShader()
     {
         final String fragmentShader =
-                "precision mediump float;       \n"		// Set the default precision to medium. We don't need as high of a
-                        // precision in the fragment shader.
-                        + "varying vec4 v_Color;          \n"		// This is the color from the vertex shader interpolated across the
-                        // triangle per fragment.
-                        + "void main()                    \n"		// The entry point for our fragment shader.
+                        "varying vec4 v_Color;          \n"
+                        + "void main()                    \n"
                         + "{                              \n"
-                        + "   gl_FragColor = v_Color;     \n"		// Pass the color directly through the pipeline.
+                        + "   gl_FragColor = v_Color;     \n"
                         + "}                              \n";
 
         return fragmentShader;
@@ -429,13 +225,6 @@ public class Figure
         GLES20.glDrawArrays(GLES20.GL_POINTS, 0, 1);
     }
 
-    /**
-     * Helper function to compile a shader.
-     *
-     * @param shaderType The shader type.
-     * @param shaderSource The shader source code.
-     * @return An OpenGL handle to the shader.
-     */
     protected int compileShader(final int shaderType, final String shaderSource)
     {
         int shaderHandle = GLES20.glCreateShader(shaderType);
@@ -469,14 +258,6 @@ public class Figure
         return shaderHandle;
     }
 
-    /**
-     * Helper function to compile and link a program.
-     *
-     * @param vertexShaderHandle An OpenGL handle to an already-compiled vertex shader.
-     * @param fragmentShaderHandle An OpenGL handle to an already-compiled fragment shader.
-     * @param attributes Attributes that need to be bound to the program.
-     * @return An OpenGL handle to the program.
-     */
     protected int createAndLinkProgram(final int vertexShaderHandle, final int fragmentShaderHandle, final String[] attributes)
     {
         int programHandle = GLES20.glCreateProgram();
