@@ -31,7 +31,7 @@ public class MyGLSurfaceView extends GLSurfaceView  {
     private final MyGLRenderer mRenderer;
     private int rotate_threshold = 30;
     private ScaleGestureDetector mScaleDetector;
-    private float mScaleFactor = 2.f;
+    private float mScaleFactor = 12.f;
 
 
 
@@ -46,7 +46,7 @@ public class MyGLSurfaceView extends GLSurfaceView  {
         setRenderer(mRenderer);
 
         // Render the view only when there is a change in the drawing data
-        setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
 
     }
@@ -71,15 +71,12 @@ public class MyGLSurfaceView extends GLSurfaceView  {
                     float dx = x - mPreviousX;
                     float dy = y - mPreviousY;
 
-                    if (x > getWidth() / 2)
-                        dy = dy * -1;
-
-                    if (x > getWidth() / 2)
-                        dy = dy * -1;
+                    if (y < getHeight() / 2)
+                        dx = dx * -1;
 
 
-                    //Establecemos el nuevo angulo de giro en el eje X y en el eje Y
-                    mRenderer.setYAngle(mRenderer.getYAngle() + dy * TOUCH_SCALE_FACTOR);
+                    //Establecemos el nuevo angulo de giro en el eje Y
+                    mRenderer.setYAngle(Math.max(-90.0f, Math.min(mRenderer.getYAngle() + dy * TOUCH_SCALE_FACTOR, 0.0f)));
 
                     mRenderer.setXAngle(mRenderer.getXAngle() + dx * TOUCH_SCALE_FACTOR);
                     requestRender();
@@ -97,7 +94,7 @@ public class MyGLSurfaceView extends GLSurfaceView  {
         public boolean onScale(ScaleGestureDetector detector) {
             mScaleFactor *= detector.getScaleFactor();
             // Don't let the object get too small or too large.
-            mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 15.0f));
+            mScaleFactor = Math.max(2f, Math.min(mScaleFactor, 18.0f));
             mRenderer.setScale(mScaleFactor);
             return true;
         }
