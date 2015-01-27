@@ -100,7 +100,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         final int fragmentShaderHandle = mFigure.compileShader(GLES20.GL_FRAGMENT_SHADER, fragmentShader);
 
         mFigure.mPerVertexProgramHandle = mFigure.createAndLinkProgram(vertexShaderHandle, fragmentShaderHandle,
-                new String[] {"a_Position",  "a_Color"/*, "a_Normal"/*, "a_TexCoordinate"*/});
+                new String[] {"a_Position",  "a_Color"/*, "a_Normal"*/, "a_TexCoordinate"});
 
         // Define a simple shader program for our point.
         final String pointVertexShader =
@@ -126,7 +126,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         mFigure.mPointProgramHandle = mFigure.createAndLinkProgram(pointVertexShaderHandle, pointFragmentShaderHandle,
                 new String[] {"a_Position"});
 
-        //mFigure.mTextureDataHandle = loadTexture();
+        mFigure.mTextureDataHandle = loadTexture();
     }
 
     @Override
@@ -147,6 +147,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         mFigure.mPositionHandle = GLES20.glGetAttribLocation(mFigure.mPerVertexProgramHandle, "a_Position");
         mFigure.mColorHandle = GLES20.glGetAttribLocation(mFigure.mPerVertexProgramHandle, "a_Color");
         //mFigure.mNormalHandle = GLES20.glGetAttribLocation(mFigure.mPerVertexProgramHandle, "a_Normal");
+        mFigure.mTexCoordinateHandle = GLES20.glGetAttribLocation(mFigure.mPerVertexProgramHandle, "a_TexCoordinate");
+        mFigure.mTextureUniformHandle = GLES20.glGetUniformLocation(mFigure.mPerVertexProgramHandle, "u_Texture");
 
         // Calculate position of the light. Rotate and then push into the distance.
         Matrix.setIdentityM(mFigure.mLightModelMatrix, 0);
@@ -272,7 +274,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 
             // Read in the resource
-            final Bitmap bitmap = BitmapFactory.decodeStream(this.getClass().getClassLoader().getResourceAsStream("res/raw/helens.ppm"));
+            final Bitmap bitmap = BitmapFactory.decodeStream(this.getClass().getClassLoader().getResourceAsStream("res/raw/helenstex2.bmp"));
 
             // Bind to the texture in OpenGL
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0]);

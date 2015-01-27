@@ -57,6 +57,7 @@ public class Figure
     private final ShortBuffer mDrawOrder;
     private final FloatBuffer mColors;
     //private final FloatBuffer mNormals;
+    private final FloatBuffer mTexCoordinates;
 
     /** This will be used to pass in the transformation matrix. */
     protected int mMVPMatrixHandle;
@@ -76,7 +77,11 @@ public class Figure
     /** This will be used to pass in model normal information. */
     protected int mNormalHandle;
 
-    protected int mTextureDataHandle;
+    protected int mTexCoordinateHandle;
+
+    public int mTextureUniformHandle;
+
+    public int mTextureDataHandle;
 
     /** How many bytes per float. */
     private final int mBytesPerFloat = 4;
@@ -94,7 +99,7 @@ public class Figure
     private final int mNormalDataSize = 3;
 
     /** Size of the normal data in elements. */
-    private final int mTexturePositionDataSize = 3;
+    private final int mTexturePositionDataSize = 2;
 
     /** Used to hold a light centered on the origin in model space. We need a 4th coordinate so we can get translations to work when
      *  we multiply this by our transformation matrices. */
@@ -117,6 +122,8 @@ public class Figure
     private float[] colorData;
     //private float[] normalData;
     private short[] drawOrderData;
+
+
 
     /**
      * Initialize the model data.
@@ -303,6 +310,10 @@ public class Figure
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
         mColors.put(colorData).position(0);
 
+        mTexCoordinates = ByteBuffer.allocateDirect(texturePositionData.length * mBytesPerFloat)
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
+        mTexCoordinates.put(texturePositionData).position(0);
+
         /*mNormals = ByteBuffer.allocateDirect(normalData.length * mBytesPerFloat)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
         mNormals.put(normalData).position(0);*/
@@ -318,8 +329,10 @@ public class Figure
                         + "attribute vec4 a_Position;     \n"		// Per-vertex position information we will pass in.
                         + "attribute vec4 a_Color;        \n"		// Per-vertex color information we will pass in.
                         //+ "attribute vec3 a_Normal;       \n"		// Per-vertex normal information we will pass in.
+                        + "attribute vec2 a_TexCoordinate; \n"      // Per-vertex texture coordinate information we will pass in.
 
                         + "varying vec4 v_Color;          \n"		// This will be passed into the fragment shader.
+                        + "varying vec2 v_TexCoordinate;  \n"		// This will be passed into the fragment shader.
 
                         + "void main()                    \n" 	// The entry point for our vertex shader.
                         + "{                              \n"
@@ -337,8 +350,10 @@ public class Figure
                         // Attenuate the light based on distance.
                         //+ "   diffuse = diffuse * (1.0 / (1.0 + (0.1 * distance * distance )));  \n"
                         // Multiply the color by the illumination level. It will be interpolated across the triangle.
-                        + "   v_Color = a_Color; \n"//* diffuse;                                       \n"
-                        //+ "   v_Color = a_Color;                                       \n"
+                        //+ "   v_Color = a_Color; \n"//* diffuse;                                       \n"
+                        // Pass through the texture coordinate.
+                        + "   v_TexCoordinate = a_TexCoordinate;                                      \n"
+                        + "   v_Color = a_Color;                                       \n"
                         // gl_Position is a special variable used to store the final position.
                         // Multiply the vertex by the matrix to get the final point in normalized screen coordinates.
                         + "   gl_Position = u_MVPMatrix * a_Position;                            \n"
@@ -353,10 +368,12 @@ public class Figure
                 "precision mediump float;       \n"		// Set the default precision to medium. We don't need as high of a
                         // precision in the fragment shader.
                         + "varying vec4 v_Color;          \n"		// This is the color from the vertex shader interpolated across the
+                        + "uniform sampler2D u_Texture;   \n"       // The input texture.
+                        + "varying vec2 v_TexCoordinate;  \n"       // Interpolated texture coordinate per fragment.
                         // triangle per fragment.
                         + "void main()                    \n"		// The entry point for our fragment shader.
                         + "{                              \n"
-                        + "   gl_FragColor = v_Color;     \n"		// Pass the color directly through the pipeline.
+                        + "   gl_FragColor = (v_Color * texture2D(u_Texture, v_TexCoordinate));     \n"		// Pass the color directly through the pipeline.
                         + "}                              \n";
 
         return fragmentShader;
@@ -390,6 +407,12 @@ public class Figure
 
         GLES20.glEnableVertexAttribArray(mNormalHandle);*/
 
+        // Pass the texture information
+        mTexCoordinates.position(0);
+        GLES20.glVertexAttribPointer(mTexCoordinateHandle, mTexturePositionDataSize, GLES20.GL_FLOAT, false,
+                0, mTexCoordinates);
+
+        GLES20.glEnableVertexAttribArray(mTexCoordinateHandle);
         // This multiplies the view matrix by the model matrix, and stores the result in the MVP matrix
         // (which currently contains model * view).
         Matrix.multiplyMM(mMVPMatrix, 0, mViewMatrix, 0, mModelMatrix, 0);
@@ -406,6 +429,16 @@ public class Figure
 
         // Pass in the light position in eye space.        
         //GLES20.glUniform3f(mLightPosHandle, mLightPosInEyeSpace[0], mLightPosInEyeSpace[1], mLightPosInEyeSpace[2]);
+
+        // Set the active texture unit to texture unit 0.
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+
+        // Bind the texture to this unit.
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
+
+        // Tell the texture uniform sampler to use this texture in the shader by binding to texture unit 0.
+        GLES20.glUniform1i(mTextureUniformHandle, 0);
+
 
         // Draw the cube.
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrderData.length,
